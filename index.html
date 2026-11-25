@@ -586,6 +586,101 @@
       box-shadow: 0 0 0 3px rgba(224, 112, 112, 0.12);
     }
 
+    .form-group.error .file-picker {
+      border-color: #e07070;
+      box-shadow: 0 0 0 3px rgba(224, 112, 112, 0.12);
+    }
+
+    .payment-details {
+      display: none;
+      animation: fadeInUp 0.35s ease both;
+    }
+
+    .payment-details.visible {
+      display: flex;
+    }
+
+    .payment-note,
+    .file-hint,
+    .file-status {
+      color: rgba(245, 240, 229, 0.68);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .file-picker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      min-height: 54px;
+      padding: 0.8rem 1rem;
+      border: 1px dashed rgba(214, 181, 109, 0.55);
+      border-radius: 12px;
+      background: rgba(5, 5, 4, 0.45);
+      color: var(--gold-light);
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    }
+
+    .file-picker:hover {
+      background: rgba(214, 181, 109, 0.08);
+      border-color: var(--gold);
+      transform: translateY(-1px);
+    }
+
+    .file-input:focus-visible + .file-picker {
+      outline: 2px solid var(--gold-light);
+      outline-offset: 3px;
+    }
+
+    .file-status {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      min-height: 1.2rem;
+      overflow-wrap: anywhere;
+    }
+
+    .file-status:empty {
+      display: none;
+    }
+
+    .file-spinner {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      border: 2px solid rgba(214, 181, 109, 0.25);
+      border-top-color: var(--gold-light);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .payment-details {
+        animation: none;
+      }
+
+      .file-spinner {
+        animation-duration: 1.8s;
+      }
+    }
+
     .error-message {
       font-size: 0.75rem;
       color: #e07070;
@@ -1001,6 +1096,37 @@
               <span class="error-message" id="err-keanggotaan"></span>
             </div>
 
+            <!-- Metode Pembayaran -->
+            <div class="form-group full-width">
+              <label for="metodePembayaran">Metode Pembayaran <span class="required">*</span></label>
+              <select id="metodePembayaran" name="metodePembayaran">
+                <option value="">-- Pilih metode pembayaran --</option>
+                <option value="Tunai">Tunai (cash)</option>
+                <option value="Transfer">Transfer</option>
+              </select>
+              <span class="error-message" id="err-metodePembayaran"></span>
+            </div>
+
+            <div class="form-group full-width payment-details" id="paymentDetails" aria-hidden="true">
+              <label for="buktiPembayaran">Bukti Transfer <span class="required">*</span></label>
+              <p class="payment-note">Unggah foto atau PDF bukti transfer. Pastikan informasi pada bukti terbaca jelas.</p>
+              <input
+                type="file"
+                id="buktiPembayaran"
+                name="buktiPembayaran"
+                class="file-input"
+                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                aria-describedby="fileHint fileStatus err-buktiPembayaran"
+              />
+              <label class="file-picker" for="buktiPembayaran">
+                <span aria-hidden="true">↑</span>
+                <span>Pilih bukti transfer</span>
+              </label>
+              <span class="file-hint" id="fileHint">Format JPG, PNG, atau PDF · Maksimal 5 MB</span>
+              <span class="file-status" id="fileStatus" aria-live="polite"></span>
+              <span class="error-message" id="err-buktiPembayaran"></span>
+            </div>
+
             <!-- Submit -->
             <div class="form-submit-wrap">
               <button type="submit" class="btn-submit" id="submitBtn">
@@ -1032,7 +1158,7 @@
        Setelah Code.gs dideploy sebagai Web App (Execute as: Me,
        Who has access: Anyone), tempel URL /exec hasil deployment di bawah.
        ========================================================= */
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSkg-m44VNzYZdmTYgvGMPd5HE4r2UaqPCgEgJ9bPdKeeHG-jKv4C2XR9SQ6TWL6z6/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1VwaSs3kF3f9HUc4SUNtY4TIocqyyxsafwU8_1TibudfOm4ziQQBry5ik8PY_WYOg/exec";
 
     /* =========================================================
        PARTIKEL CAHAYA
@@ -1115,8 +1241,15 @@
       { id: 'whatsapp', label: 'Nomor WhatsApp' },
       { id: 'email', label: 'Email' },
       { id: 'programStudi', label: 'Program Studi / Divisi' },
-      { id: 'keanggotaan', label: 'Pengurus atau Anggota' }
+      { id: 'keanggotaan', label: 'Pengurus atau Anggota' },
+      { id: 'metodePembayaran', label: 'Metode Pembayaran' }
     ];
+    const paymentDetails = document.getElementById('paymentDetails');
+    const proofInput = document.getElementById('buktiPembayaran');
+    const fileStatus = document.getElementById('fileStatus');
+    const MAX_PROOF_SIZE = 5 * 1024 * 1024;
+    let paymentProof = null;
+    let fileReadVersion = 0;
 
     function setError(fieldId, message) {
       const group = document.getElementById(fieldId).closest('.form-group');
@@ -1209,6 +1342,21 @@
         if (!firstInvalid) firstInvalid = 'keanggotaan';
       }
 
+      const metodePembayaran = document.getElementById('metodePembayaran').value;
+      if (!metodePembayaran) {
+        setError('metodePembayaran', 'Pilih metode pembayaran.');
+        isValid = false;
+        if (!firstInvalid) firstInvalid = 'metodePembayaran';
+      }
+
+      if (metodePembayaran === 'Transfer' && !paymentProof) {
+        setError('buktiPembayaran', 'Pilih bukti transfer yang valid sebelum mengirim.');
+        isValid = false;
+        if (!firstInvalid) firstInvalid = 'buktiPembayaran';
+      } else {
+        setError('buktiPembayaran', '');
+      }
+
       if (firstInvalid) {
         document.getElementById(firstInvalid).focus();
       }
@@ -1217,28 +1365,11 @@
     }
 
     /* =========================================================
-       FUNGSI SUBMIT KE GOOGLE APPS SCRIPT
-       ---------------------------------------------------------
-       Fungsi ini mengirim data formulir sebagai JSON ke
-       GOOGLE_SCRIPT_URL dengan metode POST.
-
-       CATATAN PENTING untuk Google Apps Script:
-       1. Di sisi Apps Script, gunakan doPost(e) dan baca
-          e.postData.contents (JSON).
-       2. Kembalikan response JSON seperti:
-          { "result": "success", "message": "..." }
-          atau
-          { "result": "error", "message": "..." }
-       3. Agar CORS aman, pastikan Apps Script Web App di-deploy
-          dengan akses "Anyone" dan gunakan ContentService
-          dengan MimeType.JSON.
-       4. Jika browser memblokir karena CORS, pertimbangkan
-          menggunakan mode 'no-cors' (tetapi response tidak
-          dapat dibaca). Untuk pengalaman terbaik, gunakan
-          deployment yang benar dan fetch biasa.
+       KIRIM DATA MELALUI FORM TERSEMBUNYI UNTUK MENGHINDARI CORS
        ========================================================= */
+    let submissionSequence = 0;
+
     async function submitRegistration(payload) {
-      // Jika URL belum diisi, tampilkan peringatan.
       if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === 'TEMPEL_URL_WEB_APP_GOOGLE_APPS_SCRIPT_DI_SINI') {
         throw new Error(
           'URL Google Apps Script belum dikonfigurasi. ' +
@@ -1246,32 +1377,166 @@
         );
       }
 
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        // Gunakan text/plain untuk menghindari preflight CORS.
-        // Google Apps Script akan menerima data di e.postData.contents.
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-        body: JSON.stringify(payload)
+      const requestId = Date.now().toString(36) + '-' +
+        (++submissionSequence).toString(36) + '-' +
+        Math.random().toString(36).slice(2);
+      const iframeName = 'registration-response-' + requestId;
+      const iframe = document.createElement('iframe');
+      iframe.name = iframeName;
+      iframe.title = 'Respons pendaftaran';
+      iframe.hidden = true;
+
+      const requestForm = document.createElement('form');
+      requestForm.method = 'POST';
+      requestForm.action = GOOGLE_SCRIPT_URL;
+      requestForm.target = iframeName;
+      requestForm.hidden = true;
+
+      const payloadField = document.createElement('input');
+      payloadField.type = 'hidden';
+      payloadField.name = 'payload';
+      payloadField.value = JSON.stringify({...payload, requestId: requestId});
+      requestForm.appendChild(payloadField);
+      document.body.append(iframe, requestForm);
+
+      return new Promise(function (resolve, reject) {
+        let timeoutId;
+        function cleanup() {
+          window.removeEventListener('message', handleMessage);
+          window.clearTimeout(timeoutId);
+          requestForm.remove();
+          iframe.remove();
+        }
+
+        function handleMessage(event) {
+          if (!event.data ||
+              event.data.requestId !== requestId) {
+            return;
+          }
+
+          cleanup();
+          if (event.data.result === 'success') {
+            resolve(event.data);
+          } else {
+            reject(new Error(event.data.message || 'Gagal menyimpan data.'));
+          }
+        }
+
+        window.addEventListener('message', handleMessage);
+        timeoutId = window.setTimeout(function () {
+          cleanup();
+          reject(new Error(
+            'Server belum mengirim konfirmasi. Pastikan Code.gs terbaru sudah di-deploy sebagai versi baru. Cek spreadsheet sebelum mencoba lagi agar data tidak terkirim ganda.'
+          ));
+        }, 120000);
+
+        try {
+          requestForm.submit();
+        } catch (error) {
+          cleanup();
+          reject(new Error('Gagal mengirim formulir. Periksa koneksi lalu coba lagi.'));
+        }
       });
-
-      // Jika response tidak OK (misal 404/500), lempar error.
-      if (!response.ok) {
-        throw new Error('Server merespons dengan status ' + response.status);
-      }
-
-      // Baca respons JSON dari Apps Script.
-      // Pastikan Apps Script mengembalikan JSON yang valid.
-      const data = await response.json();
-
-      // Cek apakah Apps Script menyatakan sukses.
-      if (data.result !== 'success') {
-        throw new Error(data.message || 'Gagal menyimpan data.');
-      }
-
-      return data;
     }
+
+    function setFileStatus(message, loading) {
+      fileStatus.replaceChildren();
+      if (loading) {
+        const spinner = document.createElement('span');
+        spinner.className = 'file-spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        fileStatus.appendChild(spinner);
+      }
+      if (message) {
+        const text = document.createElement('span');
+        text.textContent = message;
+        fileStatus.appendChild(text);
+      }
+    }
+
+    function readPaymentProof(file) {
+      return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          if (typeof reader.result !== 'string') {
+            reject(new Error('Bukti transfer tidak dapat dibaca.'));
+            return;
+          }
+          resolve({
+            name: file.name,
+            dataUrl: reader.result
+          });
+        };
+        reader.onerror = function () {
+          reject(new Error('Gagal membaca file bukti transfer.'));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById('metodePembayaran').addEventListener('change', function () {
+      const isTransfer = this.value === 'Transfer';
+      paymentDetails.classList.toggle('visible', isTransfer);
+      paymentDetails.setAttribute('aria-hidden', String(!isTransfer));
+      setError('metodePembayaran', '');
+      if (!isTransfer) {
+        fileReadVersion += 1;
+        paymentProof = null;
+        proofInput.value = '';
+        setFileStatus('', false);
+        setError('buktiPembayaran', '');
+      }
+    });
+
+    proofInput.addEventListener('change', async function () {
+      const file = proofInput.files && proofInput.files[0];
+      const version = ++fileReadVersion;
+      paymentProof = null;
+      setError('buktiPembayaran', '');
+
+      if (!file) {
+        setFileStatus('', false);
+        return;
+      }
+
+      const extension = file.name.split('.').pop().toLowerCase();
+      const allowedTypes = {
+        jpg: ['image/jpeg'],
+        jpeg: ['image/jpeg'],
+        png: ['image/png'],
+        pdf: ['application/pdf']
+      };
+      if (!allowedTypes[extension] || !allowedTypes[extension].includes(file.type)) {
+        proofInput.value = '';
+        setFileStatus('Format file harus JPG, PNG, atau PDF.', false);
+        setError('buktiPembayaran', 'Pilih file JPG, PNG, atau PDF.');
+        return;
+      }
+      if (file.size > MAX_PROOF_SIZE) {
+        proofInput.value = '';
+        setFileStatus('Ukuran file melebihi batas 5 MB.', false);
+        setError('buktiPembayaran', 'Ukuran bukti transfer maksimal 5 MB.');
+        return;
+      }
+      if (file.size === 0) {
+        proofInput.value = '';
+        setFileStatus('File kosong tidak dapat digunakan.', false);
+        setError('buktiPembayaran', 'File bukti transfer kosong.');
+        return;
+      }
+
+      setFileStatus('Memeriksa dan menyiapkan file...', true);
+      try {
+        const proof = await readPaymentProof(file);
+        if (version !== fileReadVersion) return;
+        paymentProof = proof;
+        setFileStatus('Bukti siap: ' + file.name, false);
+      } catch (error) {
+        if (version !== fileReadVersion) return;
+        setFileStatus(error.message, false);
+        setError('buktiPembayaran', error.message);
+      }
+    });
 
     /* =========================================================
        HANDLER SUBMIT FORM
@@ -1305,6 +1570,10 @@
         email: document.getElementById('email').value.trim(),
         programStudi: document.getElementById('programStudi').value.trim(),
         keanggotaan: document.getElementById('keanggotaan').value,
+        metodePembayaran: document.getElementById('metodePembayaran').value,
+        buktiPembayaran: document.getElementById('metodePembayaran').value === 'Transfer'
+          ? paymentProof
+          : null,
         timestamp: new Date().toISOString()
       };
 
@@ -1326,6 +1595,11 @@
 
         // Reset form setelah sukses
         form.reset();
+        paymentProof = null;
+        fileReadVersion += 1;
+        paymentDetails.classList.remove('visible');
+        paymentDetails.setAttribute('aria-hidden', 'true');
+        setFileStatus('', false);
         clearAllErrors();
       } catch (error) {
         // Gagal — tampilkan pesan error dari server atau fallback
